@@ -2,7 +2,7 @@ package in.learnjavaskills.springsecurity.enums;
 
 public enum TokenPrefix 
 {
-	prefix("Basic ");
+	prefix("Bearer ");
 	
 	private String prefixValue;
 	

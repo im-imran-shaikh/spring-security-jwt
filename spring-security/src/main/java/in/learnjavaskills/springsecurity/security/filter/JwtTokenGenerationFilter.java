@@ -1,9 +1,11 @@
 package in.learnjavaskills.springsecurity.security.filter;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -25,6 +27,8 @@ import in.learnjavaskills.springsecurity.enums.JwtTokenPayload;
 import in.learnjavaskills.springsecurity.enums.Secretkeys;
 import in.learnjavaskills.springsecurity.enums.TokenPrefix;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
 public class JwtTokenGenerationFilter extends OncePerRequestFilter {
@@ -48,13 +52,14 @@ public class JwtTokenGenerationFilter extends OncePerRequestFilter {
 		String jwtToken = Jwts.builder()
 			.setIssuer("Imran.Shaikh@Citiustech.com")
 			.setSubject("JWT token for authentication")
-			.setIssuedAt(new Date())
-			.setExpiration(new Date(new Date().getTime() + 1000000000))
+			.setIssuedAt(new Date(System.currentTimeMillis()))
+			.setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24))
 			.claim(JwtTokenPayload.username.name(), authentication.getName())
 			.claim(JwtTokenPayload.authority.name(), getAuthority(authentication.getAuthorities()))
-			.signWith(secretKey)
+			.signWith(bs64key())
 			.compact();
 		jwtToken = TokenPrefix.prefix.getPrefixValue() + jwtToken;
+		System.out.println("Generated token: " + jwtToken);
 		
 		response.setHeader(Header.Authorization.toString(), jwtToken);
 		filterChain.doFilter(request, response);
@@ -98,5 +103,16 @@ public class JwtTokenGenerationFilter extends OncePerRequestFilter {
 			return null;
 		}
 	}
+	
+	
+	 private Key getSignInKey() {
+	    byte[] keyBytes = Decoders.BASE64.decode(Secretkeys.JWT_KEYS.getKey());
+	    return Keys.hmacShaKeyFor(keyBytes);
+	 }
+	 
+	 private SecretKey bs64key()
+	 {
+		 return Keys.hmacShaKeyFor(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));
+	 }
 
 }

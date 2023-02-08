@@ -5,21 +5,32 @@ package in.learnjavaskills.springsecurity.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import in.learnjavaskills.springsecurity.enums.Role;
+import in.learnjavaskills.springsecurity.repository.UserdetailsRepository;
 import in.learnjavaskills.springsecurity.security.filter.JwtTokenGenerationFilter;
 import in.learnjavaskills.springsecurity.security.filter.JwtTokenVerification;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true)
 public class APISecurityConfiguration 
 {
+	public final UserdetailsRepository userdetailRepository;
+	
+	public APISecurityConfiguration(UserdetailsRepository userdetailRepository)
+	{
+		this.userdetailRepository = userdetailRepository;
+	}
+	
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception
 	{
@@ -34,14 +45,17 @@ public class APISecurityConfiguration
 //				.addFilterBefore(new RequestValidationFilter(), BasicAuthenticationFilter.class)
 //				.addFilterAfter(new AuthenticateLogginFilter(), BasicAuthenticationFilter.class)
 				
-				.addFilterBefore(new JwtTokenVerification(), BasicAuthenticationFilter.class)
+				.addFilterBefore(new JwtTokenVerification(new UserDetailsServiceImpl(userdetailRepository)), UsernamePasswordAuthenticationFilter.class)
 				.addFilterAfter(new JwtTokenGenerationFilter(), BasicAuthenticationFilter.class)
+				// for spring boot version 2.7 +
 				.authorizeHttpRequests((auth) -> auth
-                        .antMatchers("/account/**","/balance/**").hasRole(Role.ROLE_ADMIN.getRole())
+//                        .antMatchers("/account/**","/balance/**").hasRole(Role.ROLE_ADMIN.getRole())
                         .antMatchers("/notice/**", "/interest-rate/**","/register").permitAll()
                 ).httpBasic(Customizer.withDefaults());
-//				.authorizeHttpRequests()
-//				.antMatchers("/account/**","/balance/**").hasAnyRole("ADMIN")
+				
+		// for spring boor lesst then 2.7 version
+//				.authorizeRequests()
+//				.antMatchers("/account/**","/balance/**").hasRole("ADMIN")
 ////					.authenticated()
 //				.antMatchers("/notice/**", "/interest-rate/**","/register")
 //					.permitAll()

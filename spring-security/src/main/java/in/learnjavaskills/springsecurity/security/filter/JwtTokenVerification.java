@@ -2,7 +2,9 @@ package in.learnjavaskills.springsecurity.security.filter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.MessageDigest;
+import java.util.List;
 import java.util.Objects;
 
 import javax.crypto.SecretKey;
@@ -16,26 +18,41 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import in.learnjavaskills.springsecurity.entity.UserdetailsEntity;
 import in.learnjavaskills.springsecurity.enums.Header;
 import in.learnjavaskills.springsecurity.enums.JwtTokenPayload;
 import in.learnjavaskills.springsecurity.enums.Secretkeys;
 import in.learnjavaskills.springsecurity.enums.TokenPrefix;
+import in.learnjavaskills.springsecurity.repository.UserdetailsRepository;
+import in.learnjavaskills.springsecurity.security.UserDetailsServiceImpl;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.io.Encoders;
 import io.jsonwebtoken.security.Keys;
 
+
 public class JwtTokenVerification extends OncePerRequestFilter {
 
+	private final UserDetailsServiceImpl userDetailsService;
+	
+	public JwtTokenVerification(UserDetailsServiceImpl userDetailsService)
+	{
+		this.userDetailsService = userDetailsService;
+	}
+	
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException
 	{
-		try
-		{
+		
 		String jwtToken = request.getHeader(Header.Authorization.name());
 		System.out.println("Jwt token: " + jwtToken);
 		if (Objects.isNull(jwtToken) || jwtToken.isEmpty() || !jwtToken.startsWith(TokenPrefix.prefix.getPrefixValue()))
@@ -48,12 +65,12 @@ public class JwtTokenVerification extends OncePerRequestFilter {
 //		String secretString = Encoders.BASE64.encode(secretKey.getEncoded());
 //		System.out.println("secretKey : " + secretString);
 //		
-		
-System.out.println("jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), \"\") : " + jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), ""));		
+			
+		System.out.println("jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), \"\") : " + jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), ""));		
 		
 		// validating JWT Token, using jwt library, this will validate all is token expire etc 
 		Claims claims = Jwts.parserBuilder()
-			.setSigningKey(secretKey)
+			.setSigningKey(bs64key())
 			.build()
 			.parseClaimsJws(jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), "")) // matching the hash value of the JWT Token
 			.getBody();
@@ -66,33 +83,33 @@ System.out.println("jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), \"\") 
 		
 		System.out.println("authorityInCommaSeperatedValue : " + authorityInCommaSeperatedValue + " username : " + username);
 		
-		// Creating the username password authentication token with the username and authority,now spring secuirty will believe user has been authentication
-		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, 
-				AuthorityUtils.commaSeparatedStringToAuthorityList(authorityInCommaSeperatedValue));
+		UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 		
+		// Creating the username password authentication token with the username and authority,now spring secuirty will believe user has been authentication
+		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, 
+				userDetails.getAuthorities());
+		authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 		
 		// setting the authentication into the security context holder
 		System.out.println("authentication.getname() : " + authentication.getName() + " authentication.getAuthority() : " + authentication.getAuthorities());
 		SecurityContextHolder.getContext().setAuthentication(authentication);
-		Authentication authentication2 = SecurityContextHolder.getContext().getAuthentication();
-		System.out.println("authentication.getname() : " + authentication2.getName() + " authentication.getAuthority() : " + authentication2.getAuthorities() + " principal : " + authentication2.getPrincipal());
-		}
-		catch (Exception exception)
-		{
-			exception.printStackTrace();
-			
-		}
+	
 		filterChain.doFilter(request, response);
 	}
 	
 	/**
-	 * Not authentication login api using the JWT token because, login api will get authenticated by the basic authentication filter.
+	 * Not authentication login api using the JWT token because, login api aother open apis will get authenticated by the basic authentication filter.
 	 * Using the login api we are generating the JWT token
 	 */
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
 		System.out.println("request.getServletPath() : " + request.getServletPath());
-		return request.getServletPath().equalsIgnoreCase("/login");
+		String servletPath = request.getServletPath();
+		
+		if (servletPath.equalsIgnoreCase("/login") ||  servletPath.equalsIgnoreCase("/notice") ||
+				servletPath.equalsIgnoreCase("/interest-rate/saving") || servletPath.equalsIgnoreCase("/register"))
+			return true;
+		return false;
 	}
 	
 	private byte[] getSha256BitKey() 
@@ -109,4 +126,10 @@ System.out.println("jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), \"\") 
 		}
 	}
 
+	
+
+	 private SecretKey bs64key()
+	 {
+		 return Keys.hmacShaKeyFor(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));
+	 }
 }

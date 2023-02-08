@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,7 @@ public class BalanceController {
 	}
 	
 	@PostMapping("deposit")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<String> deposit()
 	{
 		System.out.println("under depost controller " + LocalDateTime.now());
