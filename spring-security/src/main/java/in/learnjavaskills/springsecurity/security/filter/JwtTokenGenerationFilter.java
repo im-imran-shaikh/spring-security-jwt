@@ -41,11 +41,7 @@ public class JwtTokenGenerationFilter extends OncePerRequestFilter {
 	{
 		Authentication authentication = SecurityContextHolder.getContext()
 			.getAuthentication();
-		
-		SecretKey secretKey = Keys.hmacShaKeyFor(getSha256BitKey());
-//		SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
-//		String secretString = Encoders.BASE64.encode(secretKey.getEncoded());
-//		System.out.println("secretKey : " + secretString);
+
 		
 		System.out.println("Secretkeys.JWT_KEYS.getKey() : " + Secretkeys.JWT_KEYS.getKey());
 		
@@ -90,26 +86,7 @@ public class JwtTokenGenerationFilter extends OncePerRequestFilter {
 				.equalsIgnoreCase("/login");
 	}
 	
-	private byte[] getSha256BitKey() 
-	{
-		try
-		{
-			 MessageDigest md = MessageDigest.getInstance("SHA-256");
-		     return md.digest(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));
-		}
-		catch (Exception exception)
-		{
-			exception.printStackTrace();
-			return null;
-		}
-	}
 	
-	
-	 private Key getSignInKey() {
-	    byte[] keyBytes = Decoders.BASE64.decode(Secretkeys.JWT_KEYS.getKey());
-	    return Keys.hmacShaKeyFor(keyBytes);
-	 }
-	 
 	 private SecretKey bs64key()
 	 {
 		 return Keys.hmacShaKeyFor(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));

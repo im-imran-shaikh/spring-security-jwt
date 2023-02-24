@@ -58,13 +58,6 @@ public class JwtTokenVerification extends OncePerRequestFilter {
 		if (Objects.isNull(jwtToken) || jwtToken.isEmpty() || !jwtToken.startsWith(TokenPrefix.prefix.getPrefixValue()))
 			throw new BadCredentialsException("JWT token must be non null and non empty and must contain valid token prefix");
 		
-	
-		
-		SecretKey secretKey = Keys.hmacShaKeyFor(getSha256BitKey());
-//		SecretKey secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
-//		String secretString = Encoders.BASE64.encode(secretKey.getEncoded());
-//		System.out.println("secretKey : " + secretString);
-//		
 			
 		System.out.println("jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), \"\") : " + jwtToken.replace(TokenPrefix.prefix.getPrefixValue(), ""));		
 		
@@ -112,22 +105,7 @@ public class JwtTokenVerification extends OncePerRequestFilter {
 		return false;
 	}
 	
-	private byte[] getSha256BitKey() 
-	{
-		try
-		{
-			 MessageDigest md = MessageDigest.getInstance("SHA-256");
-		     return md.digest(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));
-		}
-		catch (Exception exception)
-		{
-			exception.printStackTrace();
-			return null;
-		}
-	}
-
 	
-
 	 private SecretKey bs64key()
 	 {
 		 return Keys.hmacShaKeyFor(Secretkeys.JWT_KEYS.getKey().getBytes(StandardCharsets.UTF_8));
